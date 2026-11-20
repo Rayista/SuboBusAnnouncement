@@ -1,0 +1,236 @@
+# Subo Bus Announcement
+
+**A GPS-driven bus stop announcement app for in-vehicle Android devices.**
+
+English | [简体中文](README.zh-CN.md) | [繁體中文（台灣）](README.zh-TW.md)
+
+---
+
+## Introduction
+
+Subo Bus Announcement (苏北公交报站) plays stop announcements automatically as the vehicle moves. It combines the route data in `bus/*.csv`, the audio rules in `system/audiolist.csv`, and the phone's GPS: when the bus enters a stop's approach radius it announces arrival, when it leaves the stop it announces departure, and it can skip stops when the bus is detoured.
+
+The app also ships with a built-in route editor, an audiolist rule override panel, a limit-speed override, adjustable arrival/departure sensitivity, loudness normalization, stereo channel routing, eight Material 3 color themes, and full data import/export — all configurable on the device without a computer.
+
+Its data package is **100% compatible** with the in-vehicle announcers made by Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技) — see [Compatibility with in-vehicle announcer data formats](#compatibility-with-in-vehicle-announcer-data-formats).
+
+- **Package**: `org.rayista.subobus`
+- **Version**: 3.7 (versionCode 28)
+- **Minimum Android**: 8.0 (API 26), target API 34
+- **Tech stack**: Kotlin, Jetpack Compose, Material 3
+
+---
+
+## Features
+
+### 1. Main screen
+
+- **GPS status and clock** in the top bar.
+- **Route bar** with the current route, origin → destination, and a one-tap up/down direction switch.
+- **Current stop / next stop cards** showing the stop name, the live GPS coordinate (decimal degrees) and the remaining distance to the next stop.
+- **Action buttons**: Announce, Stop, Repeat, Settings.
+- **Numeric keypad 1–9, 0** with ▲ / ▼ on the sides of `0` to move between stops without announcing.
+- **Speed bar** at the bottom: current speed and the active speed limit.
+- **Portrait and landscape layouts** are designed separately; every control fits on one screen with no scrolling.
+- **Haptic feedback** on every main-screen button (can be turned off).
+- **Keep screen on** while the app is in the foreground (can be turned off).
+
+### 2. Automatic arrival / departure
+
+- **Arrival**: when the GPS distance to a stop is within that stop's *approach distance* (`站前里程`), the arrival announcement fires. A value of `0` falls back to 50 m.
+- **Skip-stop support**: arrival detection scans every stop, so if the bus is detoured from stop 2 directly to stop 4, stop 3 is skipped and stop 4 is announced.
+- **Departure**: the bus must first come within 5 m of the stop ("overlap"), then move away until the distance reaches 50 m; the departure announcement fires once.
+- **No duplicate announcements**: each stop announces arrival and departure once until the route, direction or imported data changes.
+- **GPS quality gate**: fixes with `0,0` coordinates or accuracy worse than 100 m are ignored.
+- The automatic engine resets on route change, direction change and data import.
+
+### 3. Announcement content and order
+
+- Announcement steps are generated from `system/audiolist.csv`; missing MP3 files are skipped silently.
+- Arrival is a combined step: **arrival announcement first, then the arrival external audio**.
+- Start / end stops use the dedicated start / end announcement rules; the stop before the terminus uses the "terminus pre-announcement" rule.
+- Service tones (`服务音0.mp3` … `服务音9.mp3`) are played by the numeric keypad when present.
+
+### 4. Settings
+
+Settings are grouped as follows and persist across restarts.
+
+**Theme**
+- Eight Material 3 palettes: 4 light (Sky Blue, Teal, Amber, Violet), 3 dark (Night Blue, Forest, Coffee) and 1 pure black for OLED.
+- Colors are taken from Material 3 color roles, so the whole app switches consistently.
+
+**General**
+- Keep screen on while in the foreground.
+- Button haptic feedback.
+- **Loudness normalization**: quiet recordings are boosted toward the target loudness; loud recordings are left untouched. Maximum boost is 15 dB; results are cached per file.
+- **Language**: switch the interface between Simplified Chinese, Traditional Chinese (Taiwan) and English. Only interface text changes; CSV data, stop names and audio file names are untouched.
+
+**Announcement settings**
+- **Limit-speed override**: when on, all stops use one manual limit from 1 to 999 km/h; when off, the per-stop limit in the route CSV is used.
+- **Overspeed announcement**: a checkbox to enable or mute the overspeed voice prompt.
+- **Arrival/departure sensitivity override**: when on, arrival, overlap and departure radii can be set manually in metres (1–999); when off, the arrival radius comes from the CSV `站前里程` and overlap/departure use 5 m / 50 m.
+- **audiolist.csv override**: when on, seven checkboxes control whether each announcement type plays — start, end, terminus pre-announcement, arrival, departure, arrival external audio, departure external audio.
+
+**Experimental**
+- **Separate channels**: route audio by its audiolist category — **external audio (arrival/departure external) only on the left channel**, **main announcements only on the right channel**. Routing works even for mono files: audio is decoded to PCM, duplicated to stereo, and the unwanted side is zeroed.
+- **Double-tap to overwrite stop location**: when enabled, double-tapping the current-stop card writes the phone's current latitude/longitude into the route CSV for that stop and shows a confirmation toast.
+
+**Route selection**
+- A searchable selector: type part of the route name to filter, or pick from the inline list.
+
+**Data import and export**
+- Import an all-in-one ZIP, a routes ZIP, an audio ZIP, or a single `audiolist.csv`.
+- **Export all data**: packages `bus/`, `mp3/` and `system/` into one ZIP and lets you choose the destination and file name. The exported ZIP can be re-imported with the all-in-one import.
+
+### 5. Route data editor
+
+Open it from **Settings → Route selection → New route / Edit route**.
+
+- **New route** asks for a route name first; **Edit route** opens the selected route on the up direction.
+- **Top bar**: Back, Save, `＋` (add a blank stop at the bottom), the current direction (`上行` / `下行`), and a `⋮` menu.
+- **`⋮` menu**: Route name (rename), Switch direction, Copy up-direction stops to down direction.
+- **Stop list**: one stop per row, mail-list style, with a rounded order badge, the stop name, a subtitle (`voice · stop type · limit`), a divider and a drag handle.
+- **Swipe left** to delete a stop (red background, no confirmation); **swipe right** to insert a new stop above (highlighted background).
+- **Long-press a row or hold the drag handle** to reorder; the row lifts with a shadow, other rows animate aside, and the list auto-scrolls near the top/bottom edge. The first and last items have drag resistance so they never fly away.
+- **Stop dialog** fields: announcement voice, stop name, longitude, latitude, angle, arrival ad, departure ad, arrival tip, departure tip, arrival extension, departure extension, speed limit, approach distance, stop type and external-audio switch. Only **voice and stop name are required**; limit defaults to 50 and approach distance to 85.
+- **Stop type** is a single-choice group: Start stop / Major stop / Minor stop / End stop (default Minor). On save the first stop becomes Start stop and the last becomes End stop.
+- **Save** rewrites the CSV: stop numbers are regenerated in list order, and up/down files are written separately.
+- Leaving with unsaved changes shows a confirmation dialog; **Cancel** is the emphasised button so it is hard to lose work by accident.
+- After saving, the route list in Settings refreshes automatically.
+
+---
+
+## Data format
+
+```
+filesDir/
+├── bus/
+│   ├── 1/
+│   │   ├── 1S.csv          # up direction
+│   │   └── 1X.csv          # down direction
+│   └── 通勤1号/
+│       └── 通勤1号S.csv
+├── mp3/
+│   ├── 科技新城东园.mp3
+│   └── 服务音1.mp3
+└── system/
+    └── audiolist.csv
+```
+
+Route file names must end with `S` (up) or `X` (down) before `.csv`. Route names may contain non-digit characters; when displayed, `路` is appended only if the name ends with a digit (`11 → 11 路`, `通勤1号 → 通勤1号`).
+
+### Route CSV columns
+
+| # | Column | Notes |
+|---|--------|-------|
+| 0 | 站台编号 | Stop number, regenerated by the editor |
+| 1 | 报站语音 | Voice file name (without `.mp3`) |
+| 2 | 站名 | Display name |
+| 3 | 经度 | Longitude in **DDMM.MMMM** format |
+| 4 | 纬度 | Latitude in **DDMM.MMMM** format |
+| 5 | 角度 | Heading angle |
+| 6 | 进站广告 | Arrival advertisement |
+| 7 | 出站广告 | Departure advertisement |
+| 8 | 进站提示 | Arrival prompt |
+| 9 | 出站提示 | Departure prompt |
+| 10 | 进站扩展 | Arrival extension |
+| 11 | 出站扩展 | Departure extension |
+| 12 | 限速 | Speed limit (km/h) |
+| 13 | 站前里程 | Approach distance (m) |
+| 14 | 是否大站 | `起点站` / `大站` / `小站` / `终点站` |
+| 15 | 外音开否 | `是` / `否` |
+
+> Coordinates use the "degree + decimal minute" convention: `11930.6582` means 119°30.6582′, which is 119.51097° in decimal degrees. The app converts internally when matching GPS.
+
+### audiolist.csv
+
+The first two columns are `播报类型` and `是否播报` (`是` / `否`); the remaining columns are the audio slots for that announcement type. Supported types: `起点播报`, `终点播报`, `终点预报`, `进站播报`, `出站播报`, `进站外音`, `出站外音`.
+
+### Compatibility with in-vehicle announcer data formats
+
+The data package layout (`bus/` + `mp3/` + `system/`) follows the common format used by Chinese in-vehicle bus announcers, and is **100% compatible with the data packages produced by vendors such as Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技)** — in both directions, with no manual conversion:
+
+- **Same directory layout**: `bus/[route]/[route]S.csv`, `[route]X.csv`, `mp3/`, `system/audiolist.csv`
+- **Same route CSV schema**: 16 columns in the same order (stop number → external-audio flag); coordinates use the same DDMM.MMMM degree-minute convention
+- **Same announcement rules**: `audiolist.csv` uses the same announcement types and audio slots (origin, terminus, terminus forecast, arrival, departure, arrival external, departure external)
+- **Same file naming**: `S` = up, `X` = down; extension and letter case are ignored (`11s.csv`, `11S.CSV` both work and are normalised to upper case)
+- **Encoding auto-detected**: UTF-8, UTF-8 BOM, UTF-16 (LE/BE) and GB18030/GBK packages import directly and are stored as UTF-8; exported CSVs are UTF-8 and can be re-imported by vendor tools without garbled Chinese
+- **Audio matched by file name**: the route CSV references names without `.mp3`; a missing single file is skipped silently without breaking the rest of the group
+- **Export is drop-in ready**: "Export all data (ZIP)" keeps the original `bus/`, `mp3/`, `system/` structure and can be handed to vendor tools or copied to another vehicle unit
+
+> In short: a vendor package can be imported with one tap, and the ZIP exported by this app can be loaded by vendor tools — no column reordering, re-encoding or renaming required. If a vendor uses non-standard extra columns or naming, send a sample package and it can be adapted to the same format.
+
+
+---
+
+## First run (no bundled data)
+
+This repository and the APK contain **no route data and no audio files** — all sample routes and mp3s used during development have been removed for copyright reasons. On first launch the route list is empty, so either:
+
+1. go to **Settings → Data import/export** and import the vendor package (route ZIP, audio ZIP, `audiolist.csv`, or a single combined ZIP); or
+2. use **Settings → New route** to build a route with the built-in editor, then copy your mp3 files into the app's `mp3/` directory.
+
+If `system/audiolist.csv` is missing, the app falls back to its built-in default announcement rules, so you can start with just route CSVs and audio.
+
+When building locally with your own test data, put it in `app/src/main/assets/bus`, `app/src/main/assets/mp3` and `app/src/main/assets/system` — these paths are listed in `.gitignore`, so your test material will not be committed.
+
+---
+
+## Build and run
+
+Requirements: JDK 17, Android SDK 34, Android Studio or the command line.
+
+```bash
+# Point Gradle at your SDK (Windows example)
+echo "sdk.dir=C:/Users/<you>/android-sdk" > local.properties
+
+# Build a debug APK
+./gradlew assembleDebug
+
+# Output
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+Grant the location permission on first launch; without it, GPS-based automatic announcements are disabled but manual announcements still work.
+
+---
+
+## Project structure
+
+```
+app/src/main/java/org/rayista/subobus/
+├── MainActivity.kt              # Navigation, keep-screen-on, permissions
+├── announce/
+│   ├── AnnouncementPlanner.kt   # CSV rules -> announcement steps (with channels)
+│   ├── AudioPlayer.kt           # PCM decoding + AudioTrack channel routing
+│   ├── AutoAnnounceEngine.kt    # Arrival / departure / skip-stop state machine
+│   └── LoudnessAnalyzer.kt      # RMS loudness analysis and gain calculation
+├── i18n/
+│   └── AppStrings.kt            # Simplified Chinese / Traditional Chinese / English UI strings
+├── data/
+│   ├── AppSettings.kt           # Persisted global settings
+│   ├── Csv.kt                   # CSV parsing and encoding helpers
+│   ├── DataStore.kt             # Route/audio storage, CSV read/write, ZIP export
+│   ├── Importer.kt              # ZIP / CSV import
+│   └── Models.kt                # Stop, AudioRule
+├── ui/
+│   ├── Format.kt                # Route label formatting
+│   ├── MainScreen.kt            # Portrait / landscape main screen
+│   ├── RouteEditorScreen.kt     # Route data editor
+│   ├── SettingsScreen.kt        # Settings
+│   └── Theme.kt                 # 8 Material 3 palettes
+└── vm/
+    ├── BusViewModel.kt          # Main state, GPS, playback, settings
+    └── RouteEditorViewModel.kt  # Editor state and CSV persistence
+```
+
+---
+
+## Notes and known behaviour
+
+- **Loudness normalization is off by default.** When enabled, each file is analysed once (up to 30 s of PCM); the first playback of a file may start slightly later, afterwards the result is cached.
+- **Channel separation** is applied at the PCM level, so mono files also play on only the selected side. A stereo file keeps its own left/right content on the selected side.
+- **Double-tap location overwrite** edits the app's local copy of the route CSV. Re-importing a route package overwrites those manual corrections.
+- **Automatic announcements restart** after changing route, direction or imported data; stops already announced in the previous session may be announced again.
+- The exported ZIP keeps the `bus/`, `mp3/` and `system/` structure and can be imported back with the all-in-one import.
+- CSV files are normalised to UTF-8 during import, so Windows/GBK encoded files are handled automatically.
