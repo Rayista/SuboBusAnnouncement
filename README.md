@@ -1,14 +1,18 @@
 # Subo Bus Announcement
 
-**A GPS-driven bus stop announcement app for in-vehicle Android devices.**
+**A GPS-driven bus stop announcement app for bus enthusiasts.**
 
-English | [简体中文](README.zh-CN.md) | [繁體中文（台灣）](README.zh-TW.md)
+English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+
+> The interface is available in Simplified Chinese, Traditional Chinese and English, switchable at **Settings → General → Language**. This document is written in English.
 
 ---
 
 ## Introduction
 
-Subo Bus Announcement (苏北公交报站) plays stop announcements automatically as the vehicle moves. It combines the route data in `bus/*.csv`, the audio rules in `system/audiolist.csv`, and the phone's GPS: when the bus enters a stop's approach radius it announces arrival, when it leaves the stop it announces departure, and it can skip stops when the bus is detoured.
+Subo Bus Announcement (苏北公交报站) is a hobby project made by bus fans. The announcement flow is a faithful reproduction of the logic used by real in-vehicle bus announcers, so it is mainly intended for fun and learning — but it works just as well in real operation.
+
+It plays stop announcements automatically as the vehicle moves. It combines the route data in `bus/*.csv`, the audio rules in `system/audiolist.csv`, and the phone's GPS: when the bus enters a stop's approach radius it announces arrival, when it leaves the stop it announces departure, and it can skip stops when the bus is detoured.
 
 The app also ships with a built-in route editor, an audiolist rule override panel, a limit-speed override, adjustable arrival/departure sensitivity, loudness normalization, stereo channel routing, eight Material 3 color themes, and full data import/export — all configurable on the device without a computer.
 
@@ -63,7 +67,7 @@ Settings are grouped as follows and persist across restarts.
 - Keep screen on while in the foreground.
 - Button haptic feedback.
 - **Loudness normalization**: quiet recordings are boosted toward the target loudness; loud recordings are left untouched. Maximum boost is 15 dB; results are cached per file.
-- **Language**: switch the interface between Simplified Chinese, Traditional Chinese (Taiwan) and English. Only interface text changes; CSV data, stop names and audio file names are untouched.
+- **Language**: switch the interface between Simplified Chinese, Traditional Chinese and English. Only interface text changes; CSV data, stop names and audio file names are untouched.
 
 **Announcement settings**
 - **Limit-speed override**: when on, all stops use one manual limit from 1 to 999 km/h; when off, the per-stop limit in the route CSV is used.
@@ -148,13 +152,13 @@ The first two columns are `播报类型` and `是否播报` (`是` / `否`); the
 
 ### Compatibility with in-vehicle announcer data formats
 
-The data package layout (`bus/` + `mp3/` + `system/`) follows the common format used by Chinese in-vehicle bus announcers, and is **100% compatible with the data packages produced by vendors such as Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技)** — in both directions, with no manual conversion:
+The data package layout (`bus/` + `mp3/` + `system/`) follows the common format used by in-vehicle bus announcers, and is **100% compatible with the data packages produced by vendors such as Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技)** — in both directions, with no manual conversion:
 
 - **Same directory layout**: `bus/[route]/[route]S.csv`, `[route]X.csv`, `mp3/`, `system/audiolist.csv`
 - **Same route CSV schema**: 16 columns in the same order (stop number → external-audio flag); coordinates use the same DDMM.MMMM degree-minute convention
 - **Same announcement rules**: `audiolist.csv` uses the same announcement types and audio slots (origin, terminus, terminus forecast, arrival, departure, arrival external, departure external)
 - **Same file naming**: `S` = up, `X` = down; extension and letter case are ignored (`11s.csv`, `11S.CSV` both work and are normalised to upper case)
-- **Encoding auto-detected**: UTF-8, UTF-8 BOM, UTF-16 (LE/BE) and GB18030/GBK packages import directly and are stored as UTF-8; exported CSVs are UTF-8 and can be re-imported by vendor tools without garbled Chinese
+- **Encoding auto-detected**: UTF-8, UTF-8 BOM, UTF-16 (LE/BE) and GB18030/GBK packages import directly and are stored as UTF-8; exported CSVs are UTF-8 and can be re-imported by vendor tools without garbled text
 - **Audio matched by file name**: the route CSV references names without `.mp3`; a missing single file is skipped silently without breaking the rest of the group
 - **Export is drop-in ready**: "Export all data (ZIP)" keeps the original `bus/`, `mp3/`, `system/` structure and can be handed to vendor tools or copied to another vehicle unit
 
