@@ -21,7 +21,7 @@ The app also ships with a built-in route editor, an audiolist rule override pane
 Its data package is **100% compatible** with the in-vehicle announcers made by Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技) — see [Compatibility with in-vehicle announcer data formats](#compatibility-with-in-vehicle-announcer-data-formats).
 
 - **Package**: `org.rayista.subobus`
-- **Version**: 3.7 (versionCode 28)
+- **Version**: 3.9 (versionCode 30)
 - **Minimum Android**: 8.0 (API 26), target API 34
 - **Tech stack**: Kotlin, Jetpack Compose, Material 3
 
@@ -40,6 +40,7 @@ Its data package is **100% compatible** with the in-vehicle announcers made by B
 - **Portrait and landscape layouts** are designed separately; every control fits on one screen with no scrolling.
 - **Haptic feedback** on every main-screen button (can be turned off).
 - **Keep screen on** while the app is in the foreground (can be turned off).
+- **Runs in the background**: the app runs as a foreground service with a persistent notification carrying **Announce** and **Stop** buttons that behave exactly like the on-screen ones. GPS and automatic arrival/departure announcements keep working after you leave the screen.
 
 ### 2. Automatic arrival / departure
 
@@ -70,10 +71,12 @@ Settings are grouped as follows and persist across restarts.
 - Button haptic feedback.
 - **Loudness normalization**: quiet recordings are boosted toward the target loudness; loud recordings are left untouched. Maximum boost is 15 dB; results are cached per file.
 - **Language**: switch the interface between Simplified Chinese, Traditional Chinese and English. Only interface text changes; CSV data, stop names and audio file names are untouched.
+- **Notification quick actions**: shows or hides the **Announce** and **Stop** buttons in the persistent notification. Turning it off keeps the current/next stop text but drops the buttons; background GPS and automatic announcements are unaffected.
 
 **Announcement settings**
 - **Limit-speed override**: when on, all stops use one manual limit from 1 to 999 km/h; when off, the per-stop limit in the route CSV is used.
 - **Overspeed announcement**: a checkbox to enable or mute the overspeed voice prompt.
+- **Overspeed repeat count / interval**: defaults to 2 plays 5 seconds apart; both are adjustable (count 1–20, interval 1–999 s). The two fields are hidden while overspeed alerts are off.
 - **Arrival/departure sensitivity override**: when on, arrival, overlap and departure radii can be set manually in metres (1–999); when off, the arrival radius comes from the CSV `站前里程` and overlap/departure use 5 m / 50 m.
 - **audiolist.csv override**: when on, seven checkboxes control whether each announcement type plays — start, end, terminus pre-announcement, arrival, departure, arrival external audio, departure external audio.
 

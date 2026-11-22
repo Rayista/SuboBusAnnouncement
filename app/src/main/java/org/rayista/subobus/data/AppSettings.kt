@@ -35,6 +35,12 @@ data class AppSettings(
     val themeId: String = "dark_blue",
     /** 是否播报超速提醒 */
     val overspeedEnabled: Boolean = true,
+    /** 超速提醒播报次数（默认 2 次） */
+    val overspeedRepeat: Int = 2,
+    /** 超速提醒间隔时间（秒，默认 5 秒） */
+    val overspeedInterval: Int = 5,
+    /** 通知栏是否显示「报站 / 停止」快捷操作按钮 */
+    val notificationActions: Boolean = true,
     /** 前台是否保持屏幕常亮 */
     val keepScreenOn: Boolean = true,
     /** 按键是否震动 */
@@ -68,6 +74,9 @@ class SettingsStore(context: Context) {
         separateChannels = prefs.getBoolean("separate_channels", false),
         themeId = prefs.getString("theme_id", "dark_blue") ?: "dark_blue",
         overspeedEnabled = prefs.getBoolean("overspeed_enabled", true),
+        overspeedRepeat = prefs.getInt("overspeed_repeat", 2).coerceIn(1, 20),
+        overspeedInterval = prefs.getInt("overspeed_interval", 5).coerceIn(1, 999),
+        notificationActions = prefs.getBoolean("notification_actions", true),
         keepScreenOn = prefs.getBoolean("keep_screen_on", true),
         hapticEnabled = prefs.getBoolean("haptic_enabled", true),
         loudnessNormalization = prefs.getBoolean("loudness_normalization", false),
@@ -94,6 +103,9 @@ class SettingsStore(context: Context) {
             .putBoolean("separate_channels", settings.separateChannels)
             .putString("theme_id", settings.themeId)
             .putBoolean("overspeed_enabled", settings.overspeedEnabled)
+            .putInt("overspeed_repeat", settings.overspeedRepeat)
+            .putInt("overspeed_interval", settings.overspeedInterval)
+            .putBoolean("notification_actions", settings.notificationActions)
             .putBoolean("keep_screen_on", settings.keepScreenOn)
             .putBoolean("haptic_enabled", settings.hapticEnabled)
             .putBoolean("loudness_normalization", settings.loudnessNormalization)

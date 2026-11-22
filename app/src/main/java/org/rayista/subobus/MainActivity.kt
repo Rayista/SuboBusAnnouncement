@@ -2,6 +2,7 @@ package org.rayista.subobus
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -27,14 +28,25 @@ import org.rayista.subobus.vm.RouteEditorViewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val vm: BusViewModel by viewModels()
+    // 报站状态放在 Application 里，界面退出后后台服务仍能继续报站
+    private val vm: BusViewModel get() = (application as SuboApp).busVm
     private val editorVm: RouteEditorViewModel by viewModels()
 
     private val locationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) vm.startLocation() else vm.locationDenied()
+        if (granted) {
+            vm.startLocation()
+            startBackground()
+        } else {
+            vm.locationDenied()
+        }
     }
+
+    // Android 13+ 需要通知权限，否则前台服务的通知不会显示
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* 拒绝也能继续用，只是通知栏看不到“报站 / 停止” */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,6 +103,8 @@ class MainActivity : ComponentActivity() {
                         onLimitOverride = { vm.setLimitOverride(it) },
                         onManualLimit = { vm.setManualLimit(it) },
                         onOverspeedEnabled = { vm.setOverspeedEnabled(it) },
+                        onOverspeedRepeat = { vm.setOverspeedRepeat(it) },
+                        onOverspeedInterval = { vm.setOverspeedInterval(it) },
                         onSensitivityOverride = { vm.setSensitivityOverride(it) },
                         onArrivalSensitivity = { vm.setArrivalSensitivity(it) },
                         onOverlapSensitivity = { vm.setOverlapSensitivity(it) },
@@ -103,7 +117,8 @@ class MainActivity : ComponentActivity() {
                         onKeepScreenOn = { vm.setKeepScreenOn(it) },
                         onHapticEnabled = { vm.setHapticEnabled(it) },
                         onLoudnessNormalization = { vm.setLoudnessNormalization(it) },
-                        onLanguage = { vm.setLanguage(it) }
+                        onLanguage = { vm.setLanguage(it) },
+                        onNotificationActions = { vm.setNotificationActions(it) }
                     )
                 } else {
                     MainScreen(
@@ -127,6 +142,24 @@ class MainActivity : ComponentActivity() {
             this,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (granted) vm.startLocation() else locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (granted) {
+            vm.startLocation()
+            startBackground()
+        } else {
+            locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    /** 启动前台服务，让 GPS 与自动报站在后台继续运行。 */
+    private fun startBackground() {
+        AnnouncerService.start(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

@@ -72,6 +72,8 @@ private data class SettingsActions(
     val limitOverride: (Boolean) -> Unit,
     val manualLimit: (Int) -> Unit,
     val overspeedEnabled: (Boolean) -> Unit,
+    val overspeedRepeat: (Int) -> Unit,
+    val overspeedInterval: (Int) -> Unit,
     val sensitivityOverride: (Boolean) -> Unit,
     val arrivalSensitivity: (Int) -> Unit,
     val overlapSensitivity: (Int) -> Unit,
@@ -84,7 +86,8 @@ private data class SettingsActions(
     val keepScreenOn: (Boolean) -> Unit,
     val hapticEnabled: (Boolean) -> Unit,
     val loudnessNormalization: (Boolean) -> Unit,
-    val language: (String) -> Unit
+    val language: (String) -> Unit,
+    val notificationActions: (Boolean) -> Unit
 )
 
 @Composable
@@ -102,6 +105,8 @@ fun SettingsScreen(
     onLimitOverride: (Boolean) -> Unit,
     onManualLimit: (Int) -> Unit,
     onOverspeedEnabled: (Boolean) -> Unit,
+    onOverspeedRepeat: (Int) -> Unit,
+    onOverspeedInterval: (Int) -> Unit,
     onSensitivityOverride: (Boolean) -> Unit,
     onArrivalSensitivity: (Int) -> Unit,
     onOverlapSensitivity: (Int) -> Unit,
@@ -114,18 +119,22 @@ fun SettingsScreen(
     onKeepScreenOn: (Boolean) -> Unit,
     onHapticEnabled: (Boolean) -> Unit,
     onLoudnessNormalization: (Boolean) -> Unit,
-    onLanguage: (String) -> Unit
+    onLanguage: (String) -> Unit,
+    onNotificationActions: (Boolean) -> Unit
 ) {
-    val routesPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    // 必须用 ACTION_OPEN_DOCUMENT（OpenDocument），不能用 ACTION_GET_CONTENT：
+    // 部分车机/系统的“下载”提供方（如 DownloadStorageProvider）只对 OPEN_DOCUMENT 授权，
+    // 用 GET_CONTENT 拿到的 URI 在读取时会报 Permission Denial。
+    val routesPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImportRoutesZip(uri)
     }
-    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImportAudioZip(uri)
     }
-    val rulesPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val rulesPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImportRules(uri)
     }
-    val allPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val allPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImportAllZip(uri)
     }
     val exportPicker = rememberLauncherForActivityResult(
@@ -150,6 +159,8 @@ fun SettingsScreen(
         limitOverride = onLimitOverride,
         manualLimit = onManualLimit,
         overspeedEnabled = onOverspeedEnabled,
+        overspeedRepeat = onOverspeedRepeat,
+        overspeedInterval = onOverspeedInterval,
         sensitivityOverride = onSensitivityOverride,
         arrivalSensitivity = onArrivalSensitivity,
         overlapSensitivity = onOverlapSensitivity,
@@ -162,13 +173,14 @@ fun SettingsScreen(
         keepScreenOn = onKeepScreenOn,
         hapticEnabled = onHapticEnabled,
         loudnessNormalization = onLoudnessNormalization,
-        language = onLanguage
+        language = onLanguage,
+        notificationActions = onNotificationActions
     )
     val launchers = SettingsLaunchers(
-        { routesPicker.launch("*/*") },
-        { audioPicker.launch("*/*") },
-        { rulesPicker.launch("*/*") },
-        { allPicker.launch("*/*") }
+        { routesPicker.launch(arrayOf("*/*")) },
+        { audioPicker.launch(arrayOf("*/*")) },
+        { rulesPicker.launch(arrayOf("*/*")) },
+        { allPicker.launch(arrayOf("*/*")) }
     )
 
     BoxWithConstraints(
@@ -337,6 +349,11 @@ private fun GeneralSettings(state: UiState, actions: SettingsActions) {
         checked = state.loudnessNormalization,
         onChange = actions.loudnessNormalization
     )
+    SwitchRow(
+        title = t.notifActions,
+        checked = state.notificationActions,
+        onChange = actions.notificationActions
+    )
     LanguageRow(current = state.language, onSelect = actions.language)
 }
 
@@ -411,6 +428,10 @@ private fun AnnounceSettings(state: UiState, actions: SettingsActions) {
         checked = state.overspeedEnabled,
         onChange = actions.overspeedEnabled
     )
+    if (state.overspeedEnabled) {
+        NumberField(t.overspeedRepeat, state.overspeedRepeat, t.timesUnit, actions.overspeedRepeat)
+        NumberField(t.overspeedInterval, state.overspeedInterval, t.secondUnit, actions.overspeedInterval)
+    }
 
     SubTitle(t.sensitivityTitle)
     SwitchRow(

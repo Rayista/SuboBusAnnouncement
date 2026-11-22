@@ -103,10 +103,13 @@ class Importer(private val context: Context, private val data: DataStore) {
     }
 
     /** 判断选择器给的是不是 zip（也兼容看不到扩展名的情况） */
+    /** 判断是否为 ZIP；读取被系统拒绝时抛出 SecurityException，交给调用方提示。 */
     fun isZip(uri: Uri): Boolean = try {
         context.contentResolver.openInputStream(uri)?.use { input ->
             input.read() == 0x50 && input.read() == 0x4B // "PK"
         } ?: false
+    } catch (e: SecurityException) {
+        throw e
     } catch (_: Exception) {
         false
     }
@@ -130,6 +133,12 @@ class Importer(private val context: Context, private val data: DataStore) {
     private fun normalizeMp3Name(name: String): String =
         name.substringBeforeLast('.') + ".mp3"
 
-    private fun readUri(uri: Uri): ByteArray? =
+    /** 读取所选文件；权限缺失或文件不可读时返回 null，由调用方给出提示。 */
+    private fun readUri(uri: Uri): ByteArray? = try {
         context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+    } catch (_: SecurityException) {
+        null
+    } catch (_: Exception) {
+        null
+    }
 }

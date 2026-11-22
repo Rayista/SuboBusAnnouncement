@@ -70,6 +70,11 @@ data class AppStrings(
     val limitOverride: String,
     val manualLimit: String,
     val overspeed: String,
+    val overspeedRepeat: String,
+    val overspeedInterval: String,
+    val timesUnit: String,
+    val secondUnit: String,
+    val notifActions: String,
     val sensitivityTitle: String,
     val sensitivityOverride: String,
     val arrivalSensitivity: String,
@@ -184,7 +189,14 @@ data class AppStrings(
     val overwriteSuccess: String,
     val routeDataEmpty: String,
     val repeatDone: String,
-    val unknownError: String
+    val unknownError: String,
+
+    /* 读取所选文件被拒 */
+    val readDenied: String,
+
+    /* 前台服务通知 */
+    val notifChannel: String,
+    val notifNoRoute: String
 ) {
     fun gpsLevel(raw: String): String = when (raw) {
         "强" -> gpsStrong
@@ -380,6 +392,8 @@ val ZhCnStrings = AppStrings(
     loudness = "响度均衡（自动提升小声录音）",
     announceSettings = "报站功能设置", limitTitle = "限速设置",
     limitOverride = "是否覆写线路设定（限速）", manualLimit = "手动限速", overspeed = "是否播报超速提醒",
+    overspeedRepeat = "超速提醒播报次数", overspeedInterval = "超速提醒间隔时间",
+    timesUnit = "次", secondUnit = "秒", notifActions = "通知栏快捷操作",
     sensitivityTitle = "进出站灵敏度", sensitivityOverride = "是否覆写线路设定（灵敏度）",
     arrivalSensitivity = "进站灵敏度", overlapSensitivity = "重合灵敏度", departureSensitivity = "出站灵敏度",
     rulesTitle = "覆写 audiolist.csv", rulesOverride = "是否覆写 audiolist.csv",
@@ -427,7 +441,9 @@ val ZhCnStrings = AppStrings(
     ready = "设备就绪", dataReady = "初始数据已就绪",
     cannotSwitch = "，无法切换上下行", switchedTo = "已切换为",
     noLocation = "尚未获取到定位，无法覆写", overwriteFailed = "站点位置覆写失败", overwriteSuccess = "站点位置覆写成功",
-    routeDataEmpty = "线路数据为空", repeatDone = "重复完毕，尚未推进", unknownError = "未知错误"
+    routeDataEmpty = "线路数据为空", repeatDone = "重复完毕，尚未推进", unknownError = "未知错误",
+    readDenied = "无法读取所选文件，请重新选择（部分车机请从“文件”应用而不是“最近”中打开）",
+    notifChannel = "报站运行状态", notifNoRoute = "未选择线路，请先导入或新增"
 )
 
 val ZhTwStrings = AppStrings(
@@ -449,6 +465,8 @@ val ZhTwStrings = AppStrings(
     loudness = "響度均衡（自動提升小聲錄音）",
     announceSettings = "報站功能設定", limitTitle = "限速設定",
     limitOverride = "是否覆寫路線設定（限速）", manualLimit = "手動限速", overspeed = "是否播放超速提醒",
+    overspeedRepeat = "超速提醒播放次數", overspeedInterval = "超速提醒間隔時間",
+    timesUnit = "次", secondUnit = "秒", notifActions = "通知列快捷操作",
     sensitivityTitle = "進出站靈敏度", sensitivityOverride = "是否覆寫路線設定（靈敏度）",
     arrivalSensitivity = "進站靈敏度", overlapSensitivity = "重合靈敏度", departureSensitivity = "出站靈敏度",
     rulesTitle = "覆寫 audiolist.csv", rulesOverride = "是否覆寫 audiolist.csv",
@@ -496,7 +514,9 @@ val ZhTwStrings = AppStrings(
     ready = "裝置就緒", dataReady = "初始資料已就緒",
     cannotSwitch = "，無法切換上下行", switchedTo = "已切換為",
     noLocation = "尚未取得定位，無法覆寫", overwriteFailed = "站點位置覆寫失敗", overwriteSuccess = "站點位置覆寫成功",
-    routeDataEmpty = "路線資料為空", repeatDone = "重複完畢，尚未推進", unknownError = "未知錯誤"
+    routeDataEmpty = "路線資料為空", repeatDone = "重複完畢，尚未推進", unknownError = "未知錯誤",
+    readDenied = "無法讀取所選檔案，請重新選擇（部分車機請從「檔案」應用程式而非「最近」中開啟）",
+    notifChannel = "報站執行狀態", notifNoRoute = "尚未選擇路線，請先匯入或新增"
 )
 
 val EnStrings = AppStrings(
@@ -518,6 +538,8 @@ val EnStrings = AppStrings(
     loudness = "Loudness boost",
     announceSettings = "Announcement", limitTitle = "Speed limit",
     limitOverride = "Override route limit", manualLimit = "Manual limit", overspeed = "Overspeed alert",
+    overspeedRepeat = "Overspeed repeat count", overspeedInterval = "Overspeed interval",
+    timesUnit = "times", secondUnit = "s", notifActions = "Notification quick actions",
     sensitivityTitle = "Sensitivity", sensitivityOverride = "Override route distance",
     arrivalSensitivity = "Arrival", overlapSensitivity = "Overlap", departureSensitivity = "Departure",
     rulesTitle = "Override audiolist.csv", rulesOverride = "Override audiolist.csv",
@@ -565,7 +587,9 @@ val EnStrings = AppStrings(
     ready = "Ready", dataReady = "Initial data ready",
     cannotSwitch = ": cannot switch direction", switchedTo = "Switched to ",
     noLocation = "No location fix yet", overwriteFailed = "Failed to update stop location", overwriteSuccess = "Stop location updated",
-    routeDataEmpty = "Route data is empty", repeatDone = "Replay finished", unknownError = "Unknown error"
+    routeDataEmpty = "Route data is empty", repeatDone = "Replay finished", unknownError = "Unknown error",
+    readDenied = "Cannot read the selected file. Please pick it again (on some head units, open it from Files rather than Recent).",
+    notifChannel = "Announcement service", notifNoRoute = "No route selected"
 )
 
 fun stringsFor(languageId: String?): AppStrings = when (AppLanguage.fromId(languageId)) {

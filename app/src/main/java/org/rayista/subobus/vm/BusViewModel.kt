@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 import org.rayista.subobus.announce.AnnouncementPlanner
 import org.rayista.subobus.announce.AnnouncementStep
 import org.rayista.subobus.announce.AudioCue
+import org.rayista.subobus.AnnouncerService
 import org.rayista.subobus.announce.AudioPlayer
 import org.rayista.subobus.announce.AutoAnnounceEngine
 import org.rayista.subobus.announce.AutoAnnounceEvent
@@ -100,7 +102,13 @@ data class UiState(
     val keepScreenOn: Boolean = true,
     val hapticEnabled: Boolean = true,
     val loudnessNormalization: Boolean = false,
-    val language: String = "zh_cn"
+    val language: String = "zh_cn",
+    /** 超速提醒播报次数 */
+    val overspeedRepeat: Int = 2,
+    /** 超速提醒间隔（秒） */
+    val overspeedInterval: Int = 5,
+    /** 通知栏是否显示快捷操作按钮 */
+    val notificationActions: Boolean = true
 )
 
 class BusViewModel(app: Application) : AndroidViewModel(app) {
@@ -133,7 +141,10 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
             keepScreenOn = settings.keepScreenOn,
             hapticEnabled = settings.hapticEnabled,
             loudnessNormalization = settings.loudnessNormalization,
-            language = settings.language
+            language = settings.language,
+            overspeedRepeat = settings.overspeedRepeat,
+            overspeedInterval = settings.overspeedInterval,
+            notificationActions = settings.notificationActions
         )
     )
         private set
@@ -449,6 +460,26 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
         uiState = uiState.copy(themeId = themeId)
     }
 
+    fun setOverspeedRepeat(count: Int) {
+        val value = count.coerceIn(1, 20)
+        updateSettings(settings.copy(overspeedRepeat = value))
+        uiState = uiState.copy(overspeedRepeat = value)
+    }
+
+    fun setOverspeedInterval(seconds: Int) {
+        val value = seconds.coerceIn(1, 999)
+        updateSettings(settings.copy(overspeedInterval = value))
+        uiState = uiState.copy(overspeedInterval = value)
+    }
+
+    /** 通知栏快捷操作开关：关掉后通知仍显示状态，但不再带「报站 / 停止」按钮。 */
+    fun setNotificationActions(enabled: Boolean) {
+        updateSettings(settings.copy(notificationActions = enabled))
+        uiState = uiState.copy(notificationActions = enabled)
+        // 立刻刷新一次通知，不用等轮询
+        AnnouncerService.refresh(appContext)
+    }
+
     fun setOverspeedEnabled(enabled: Boolean) {
         updateSettings(settings.copy(overspeedEnabled = enabled))
         uiState = uiState.copy(overspeedEnabled = enabled)
@@ -658,6 +689,7 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun importRules(uri: Uri) {
+        takeReadPermission(uri)
         viewModelScope.launch {
             feedback(strings.importingRules)
             val message = try {
@@ -666,6 +698,8 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     importer.importCsv(uri)
                 }
+            } catch (_: SecurityException) {
+                strings.readDenied
             } catch (e: Exception) {
                 strings.importFailed(e.message ?: strings.unknownError)
             }
@@ -681,9 +715,32 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun importWith(scope: ZipScope, uri: Uri, tip: String) {        viewModelScope.launch {
+    /**
+     * 尽量把所选文件的读取权限“持久化”。
+     * 某些车机的文件提供方在返回 URI 后权限很短暂，先拿住再读更稳。
+     * 不支持持久授权的提供方会抛异常，忽略即可（临时授权仍然有效）。
+     */
+    private fun takeReadPermission(uri: Uri) {
+        try {
+            appContext.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun importWith(scope: ZipScope, uri: Uri, tip: String) {
+        takeReadPermission(uri)
+        viewModelScope.launch {
             feedback(tip)
-            if (!importer.isZip(uri)) {
+            val isZip = try {
+                importer.isZip(uri)
+            } catch (_: SecurityException) {
+                feedback(strings.readDenied)
+                return@launch
+            }
+            if (!isZip) {
                 feedback(strings.notZip)
                 return@launch
             }
@@ -710,7 +767,10 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
         uiState = uiState.copy(routes = routes, feedback = "$message（$routesText）")
     }
 
-    /** 超速：播两次“超速语音”，等 5 秒仍超速就继续；独立播放器，可与报站/服务音叠加。 */
+    /**
+     * 超速提醒：按设置的次数与间隔播“超速语音”（默认 2 次、间隔 5 秒），
+     * 播完一轮后若仍超速就继续下一轮。独立播放器，可与报站/服务音叠加。
+     */
     private fun startOverspeedMonitor() {
         overspeedJob?.cancel()
         overspeedJob = viewModelScope.launch {
@@ -718,8 +778,14 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
             while (isActive) {
                 val limit = uiState.limit
                 if (file != null && settings.overspeedEnabled && limit > 0 && uiState.speed > limit) {
-                    overspeedPlayer.play(listOf(AudioCue(file), AudioCue(file)))
-                    delay(5000)
+                    val times = settings.overspeedRepeat.coerceIn(1, 20)
+                    val gap = settings.overspeedInterval.coerceIn(1, 999) * 1000L
+                    for (i in 0 until times) {
+                        if (!isActive) break
+                        overspeedPlayer.play(listOf(AudioCue(file)))
+                        // 最后一次播完也要等一个间隔，再判断是否继续下一轮
+                        delay(gap)
+                    }
                 } else {
                     delay(1000)
                 }
