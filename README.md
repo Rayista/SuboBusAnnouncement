@@ -21,7 +21,7 @@ The app also ships with a built-in route editor, an audiolist rule override pane
 Its data package is **100% compatible** with the in-vehicle announcers made by Basitong (巴视通), Nanda Soft (南大苏富特) and Jiangning Bus Information Technology (江宁公交信息科技) — see [Compatibility with in-vehicle announcer data formats](#compatibility-with-in-vehicle-announcer-data-formats).
 
 - **Package**: `org.rayista.subobus`
-- **Version**: 3.9 (versionCode 30)
+- **Version**: 3.11 (versionCode 32)
 - **Minimum Android**: 8.0 (API 26), target API 34
 - **Tech stack**: Kotlin, Jetpack Compose, Material 3
 
@@ -70,13 +70,13 @@ Settings are grouped as follows and persist across restarts.
 - Keep screen on while in the foreground.
 - Button haptic feedback.
 - **Loudness normalization**: quiet recordings are boosted toward the target loudness; loud recordings are left untouched. Maximum boost is 15 dB; results are cached per file.
-- **Language**: switch the interface between Simplified Chinese, Traditional Chinese and English. Only interface text changes; CSV data, stop names and audio file names are untouched.
-- **Notification quick actions**: shows or hides the **Announce** and **Stop** buttons in the persistent notification. Turning it off keeps the current/next stop text but drops the buttons; background GPS and automatic announcements are unaffected.
+- **Language**: switch the interface between Simplified Chinese, Traditional Chinese and English. Only interface text changes; CSV data, stop names and audio file names are untouched. On first launch the language follows the system (Traditional Chinese system → 繁體中文, other Chinese → 简体中文, everything else → English); after that the manual choice wins.
+- **Run in background**: when on, a persistent notification (with **Announce** and **Stop**) is shown and GPS plus automatic announcements keep running in the background. When off, the notification disappears and the app is no longer kept alive in the background; foreground use is unaffected.
 
 **Announcement settings**
 - **Limit-speed override**: when on, all stops use one manual limit from 1 to 999 km/h; when off, the per-stop limit in the route CSV is used.
 - **Overspeed announcement**: a checkbox to enable or mute the overspeed voice prompt.
-- **Overspeed repeat count / interval**: defaults to 2 plays 5 seconds apart; both are adjustable (count 1–20, interval 1–999 s). The two fields are hidden while overspeed alerts are off.
+- **Overspeed repeat count / interval**: when overspeed is detected the voice is played the configured number of times **back to back** (default 2); if the vehicle stays over the limit, another burst starts after the configured interval (default 5 s). Count 1–20, interval 1–999 s; both fields are hidden while overspeed alerts are off.
 - **Arrival/departure sensitivity override**: when on, arrival, overlap and departure radii can be set manually in metres (1–999); when off, the arrival radius comes from the CSV `站前里程` and overlap/departure use 5 m / 50 m.
 - **audiolist.csv override**: when on, seven checkboxes control whether each announcement type plays — start, end, terminus pre-announcement, arrival, departure, arrival external audio, departure external audio.
 
@@ -89,6 +89,7 @@ Settings are grouped as follows and persist across restarts.
 
 **Data import and export**
 - Import an all-in-one ZIP, a routes ZIP, an audio ZIP, or a single `audiolist.csv`.
+- **Share-to import**: on head units whose file manager does not support the system file picker (some BYD units, for example), long-press the file → **Share** → pick **Import all / Import route ZIP / Import audio ZIP / Import audiolist.csv**. Each entry maps to the matching import above. Shared files are copied into the app cache first, so expiring URI grants are not a problem.
 - **Export all data**: packages `bus/`, `mp3/` and `system/` into one ZIP and lets you choose the destination and file name. The exported ZIP can be re-imported with the all-in-one import.
 
 ### 5. Route data editor

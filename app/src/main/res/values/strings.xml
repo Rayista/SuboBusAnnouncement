@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">苏北公交报站</string>
+    <!-- 默认（非中文系统）使用英文 -->
+    <string name="app_name">Subo Bus Announcement</string>
+
+    <!-- 分享面板里的入口标题（不要再重复应用名，系统已经会显示） -->
+    <string name="share_import_all">Import all</string>
+    <string name="share_import_routes">Import route ZIP</string>
+    <string name="share_import_audio">Import audio ZIP</string>
+    <string name="share_import_rules">Import audiolist.csv</string>
+    <string name="share_failed">Cannot read the shared file. Try another file manager.</string>
 </resources>

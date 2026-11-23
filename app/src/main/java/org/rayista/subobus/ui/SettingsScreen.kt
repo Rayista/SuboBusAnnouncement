@@ -87,7 +87,7 @@ private data class SettingsActions(
     val hapticEnabled: (Boolean) -> Unit,
     val loudnessNormalization: (Boolean) -> Unit,
     val language: (String) -> Unit,
-    val notificationActions: (Boolean) -> Unit
+    val backgroundRun: (Boolean) -> Unit
 )
 
 @Composable
@@ -120,7 +120,7 @@ fun SettingsScreen(
     onHapticEnabled: (Boolean) -> Unit,
     onLoudnessNormalization: (Boolean) -> Unit,
     onLanguage: (String) -> Unit,
-    onNotificationActions: (Boolean) -> Unit
+    onBackgroundRun: (Boolean) -> Unit
 ) {
     // 必须用 ACTION_OPEN_DOCUMENT（OpenDocument），不能用 ACTION_GET_CONTENT：
     // 部分车机/系统的“下载”提供方（如 DownloadStorageProvider）只对 OPEN_DOCUMENT 授权，
@@ -174,7 +174,7 @@ fun SettingsScreen(
         hapticEnabled = onHapticEnabled,
         loudnessNormalization = onLoudnessNormalization,
         language = onLanguage,
-        notificationActions = onNotificationActions
+        backgroundRun = onBackgroundRun
     )
     val launchers = SettingsLaunchers(
         { routesPicker.launch(arrayOf("*/*")) },
@@ -350,9 +350,9 @@ private fun GeneralSettings(state: UiState, actions: SettingsActions) {
         onChange = actions.loudnessNormalization
     )
     SwitchRow(
-        title = t.notifActions,
-        checked = state.notificationActions,
-        onChange = actions.notificationActions
+        title = t.backgroundRun,
+        checked = state.backgroundRun,
+        onChange = actions.backgroundRun
     )
     LanguageRow(current = state.language, onSelect = actions.language)
 }

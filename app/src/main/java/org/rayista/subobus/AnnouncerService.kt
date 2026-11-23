@@ -32,7 +32,6 @@ class AnnouncerService : Service() {
     private var running = false
     private var lastTitle = ""
     private var lastText = ""
-    private var lastShowActions = true
 
     private val vm: BusViewModel?
         get() = (application as? SuboApp)?.busVm
@@ -135,11 +134,9 @@ class AnnouncerService : Service() {
 
     private fun updateNotification(force: Boolean = false) {
         val (title, text) = currentTexts()
-        val showActions = vm?.uiState?.notificationActions ?: true
-        if (!force && title == lastTitle && text == lastText && showActions == lastShowActions) return
+        if (!force && title == lastTitle && text == lastText) return
         lastTitle = title
         lastText = text
-        lastShowActions = showActions
         try {
             getSystemService(NotificationManager::class.java)
                 ?.notify(NOTIFICATION_ID, buildNotification(title, text))
@@ -149,8 +146,7 @@ class AnnouncerService : Service() {
 
     private fun buildNotification(
         title: String = currentTexts().first,
-        text: String = currentTexts().second,
-        showActions: Boolean = vm?.uiState?.notificationActions ?: true
+        text: String = currentTexts().second
     ): Notification {
         val t = stringsFor(vm?.uiState?.language ?: "zh_cn")
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -187,13 +183,8 @@ class AnnouncerService : Service() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .apply {
-                // 设置里关掉「通知栏快捷操作」时，只留状态显示，不带按钮
-                if (showActions) {
-                    addAction(0, t.announce, announceIntent)
-                    addAction(0, t.stopPlayback, stopIntent)
-                }
-            }
+            .addAction(0, t.announce, announceIntent)
+            .addAction(0, t.stopPlayback, stopIntent)
             .build()
     }
 

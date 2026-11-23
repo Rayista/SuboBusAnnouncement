@@ -1,6 +1,9 @@
 package org.rayista.subobus.data
 
 import android.content.Context
+import android.os.Build
+import android.os.LocaleList
+import java.util.Locale
 
 /**
  * 全局设置（保存在 SharedPreferences，重启后仍然有效）。
@@ -39,8 +42,8 @@ data class AppSettings(
     val overspeedRepeat: Int = 2,
     /** 超速提醒间隔时间（秒，默认 5 秒） */
     val overspeedInterval: Int = 5,
-    /** 通知栏是否显示「报站 / 停止」快捷操作按钮 */
-    val notificationActions: Boolean = true,
+    /** 开启后台运行：显示常驻通知（含「报站 / 停止」）并允许后台定位报站 */
+    val backgroundRun: Boolean = true,
     /** 前台是否保持屏幕常亮 */
     val keepScreenOn: Boolean = true,
     /** 按键是否震动 */
@@ -51,9 +54,33 @@ data class AppSettings(
     val language: String = "zh_cn"
 )
 
-class SettingsStore(context: Context) {
+class SettingsStore(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("subo_settings", Context.MODE_PRIVATE)
+
+    /**
+     * 用户还没在设置里选过语言时，跟随系统语言：
+     * 繁体中文（台湾/香港/澳门或 Hant 脚本）→ zh_tw，其它中文 → zh_cn，其余 → en。
+     */
+    private fun systemLanguage(): String {
+        val locale = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                LocaleList.getDefault()[0]
+            } else {
+                Locale.getDefault()
+            }
+        } catch (_: Exception) {
+            Locale.getDefault()
+        }
+        if (locale.language.lowercase() != "zh") return "en"
+        val script = try {
+            locale.script
+        } catch (_: Exception) {
+            ""
+        }
+        val country = locale.country.uppercase()
+        return if (script == "Hant" || country in setOf("TW", "HK", "MO")) "zh_tw" else "zh_cn"
+    }
 
     fun load(): AppSettings = AppSettings(
         limitOverride = prefs.getBoolean("limit_override", false),
@@ -76,11 +103,11 @@ class SettingsStore(context: Context) {
         overspeedEnabled = prefs.getBoolean("overspeed_enabled", true),
         overspeedRepeat = prefs.getInt("overspeed_repeat", 2).coerceIn(1, 20),
         overspeedInterval = prefs.getInt("overspeed_interval", 5).coerceIn(1, 999),
-        notificationActions = prefs.getBoolean("notification_actions", true),
+        backgroundRun = prefs.getBoolean("background_run", true),
         keepScreenOn = prefs.getBoolean("keep_screen_on", true),
         hapticEnabled = prefs.getBoolean("haptic_enabled", true),
         loudnessNormalization = prefs.getBoolean("loudness_normalization", false),
-        language = prefs.getString("language", "zh_cn") ?: "zh_cn"
+        language = prefs.getString("language", null) ?: systemLanguage()
     )
 
     fun save(settings: AppSettings) {
@@ -105,7 +132,7 @@ class SettingsStore(context: Context) {
             .putBoolean("overspeed_enabled", settings.overspeedEnabled)
             .putInt("overspeed_repeat", settings.overspeedRepeat)
             .putInt("overspeed_interval", settings.overspeedInterval)
-            .putBoolean("notification_actions", settings.notificationActions)
+            .putBoolean("background_run", settings.backgroundRun)
             .putBoolean("keep_screen_on", settings.keepScreenOn)
             .putBoolean("haptic_enabled", settings.hapticEnabled)
             .putBoolean("loudness_normalization", settings.loudnessNormalization)

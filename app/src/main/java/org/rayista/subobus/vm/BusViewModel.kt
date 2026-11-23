@@ -107,8 +107,8 @@ data class UiState(
     val overspeedRepeat: Int = 2,
     /** 超速提醒间隔（秒） */
     val overspeedInterval: Int = 5,
-    /** 通知栏是否显示快捷操作按钮 */
-    val notificationActions: Boolean = true
+    /** 开启后台运行（常驻通知 + 后台定位报站） */
+    val backgroundRun: Boolean = true
 )
 
 class BusViewModel(app: Application) : AndroidViewModel(app) {
@@ -144,7 +144,7 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
             language = settings.language,
             overspeedRepeat = settings.overspeedRepeat,
             overspeedInterval = settings.overspeedInterval,
-            notificationActions = settings.notificationActions
+            backgroundRun = settings.backgroundRun
         )
     )
         private set
@@ -472,12 +472,20 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
         uiState = uiState.copy(overspeedInterval = value)
     }
 
-    /** 通知栏快捷操作开关：关掉后通知仍显示状态，但不再带「报站 / 停止」按钮。 */
-    fun setNotificationActions(enabled: Boolean) {
-        updateSettings(settings.copy(notificationActions = enabled))
-        uiState = uiState.copy(notificationActions = enabled)
-        // 立刻刷新一次通知，不用等轮询
-        AnnouncerService.refresh(appContext)
+    /**
+     * 后台运行开关：
+     * 开启 → 启动前台服务，通知栏常驻（带「报站 / 停止」），后台继续定位与自动报站；
+     * 关闭 → 停止前台服务，通知消失，App 退到后台后不再保活。
+     */
+    fun setBackgroundRun(enabled: Boolean) {
+        updateSettings(settings.copy(backgroundRun = enabled))
+        uiState = uiState.copy(backgroundRun = enabled)
+        if (enabled) {
+            startLocation()
+            AnnouncerService.start(appContext)
+        } else {
+            AnnouncerService.stop(appContext)
+        }
     }
 
     fun setOverspeedEnabled(enabled: Boolean) {
@@ -768,8 +776,9 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * 超速提醒：按设置的次数与间隔播“超速语音”（默认 2 次、间隔 5 秒），
-     * 播完一轮后若仍超速就继续下一轮。独立播放器，可与报站/服务音叠加。
+     * 超速提醒：触发一次后连续播“超速语音”N 次（默认 2 次，中间不留间隔），
+     * 若仍持续超速，间隔设定秒数（默认 5 秒）后再播一轮。
+     * 独立播放器，可与报站/服务音叠加。
      */
     private fun startOverspeedMonitor() {
         overspeedJob?.cancel()
@@ -778,14 +787,11 @@ class BusViewModel(app: Application) : AndroidViewModel(app) {
             while (isActive) {
                 val limit = uiState.limit
                 if (file != null && settings.overspeedEnabled && limit > 0 && uiState.speed > limit) {
+                    // 触发一次：连续播 N 次（中间不留间隔）
                     val times = settings.overspeedRepeat.coerceIn(1, 20)
-                    val gap = settings.overspeedInterval.coerceIn(1, 999) * 1000L
-                    for (i in 0 until times) {
-                        if (!isActive) break
-                        overspeedPlayer.play(listOf(AudioCue(file)))
-                        // 最后一次播完也要等一个间隔，再判断是否继续下一轮
-                        delay(gap)
-                    }
+                    overspeedPlayer.play(List(times) { AudioCue(file) })
+                    // 仍然超速的话，等设置的间隔后再来一轮
+                    delay(settings.overspeedInterval.coerceIn(1, 999) * 1000L)
                 } else {
                     delay(1000)
                 }

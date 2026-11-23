@@ -11,8 +11,8 @@ android {
         applicationId = "org.rayista.subobus"
         minSdk = 26
         targetSdk = 34
-        versionCode = 30
-        versionName = "3.9"
+        versionCode = 32
+        versionName = "3.11"
     }
 
     buildTypes {
